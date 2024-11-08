@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="upload-container">
+        <!-- Bouton pour uploader un fichier -->
+        <form action="/upload/" method="post" enctype="multipart/form-data" class="upload-button-form">
+            {% csrf_token %}
+            <label for="file-upload" class="new-button">
+                <i class='bx bx-upload'></i> Upload File
+            </label>
+            <input id="file-upload" type="file" name="file" onchange="this.form.submit()" style="display: none;">
+        </form>
+
+        <!-- Bouton pour créer un dossier -->
+        <form action="{% url 'create_folder' %}" method="post" class="folder-button-form">
+            {% csrf_token %}
+            <input type="text" name="name" placeholder="Nom du dossier" required class="folder-name-input">
+            <button type="submit" class="new-button">
+                <i class='bx bx-folder-plus'></i> New Folder
+            </button>
+        </form>
+    </div>
+
+    <style>
+        .upload-container {
+            display: flex;
+            gap: 10px; /* Espace entre les deux boutons */
+        }
+
+        .new-button {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+            text-align: center;
+        }
+
+        .folder-name-input {
+            padding: 5px;
+            margin-right: 5px;
+        }
+    </style>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Signup</title>
+    <link rel="stylesheet" href="{% static 'styleLogin.css' %}">
+</head>
+<body>
+    <div class="main">  	
+        <input type="checkbox" id="chk" aria-hidden="true">
+
+        <div class="signup">
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                <label for="chk" aria-hidden="true">Sign up</label>
+                
+                <label for = "username" >Username</label>
+                <style>
+                    .signup label[for="username"] {
+                        display: block;
+                        text-align: center;
+                        font-size: 0.8em;
+                        margin-bottom: -15px;
+                        margin-top: 0;
+                    }
+                </style>
+                
+                {{ signup_form.username }}
+                <label for="email" >Email</label>
+                <style>
+                    .signup label[for="email"] {
+                        display: block;
+                        text-align: center;
+                        font-size: 0.8em;
+                        margin-bottom: -15px;
+                        margin-top: 0;
+
+        
+                    }
+                </style>
+                
+                {{ signup_form.email }}
+                <label for="password">Password</label>
+                <style>
+                    .signup label[for="password"] {
+                        display: block;
+                        text-align: center;
+                        font-size: 0.8em;
+                        margin-bottom: -15px;
+                        margin-top: 2px;
+                    }
+                </style>
+                {{ signup_form.password }}
+                <button type="submit" name="signup">Sign up</button>
+            </form>
+        </div>
+
+        <div class="login">
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                <label for="chk" aria-hidden="true">Login</label>
+                <label for = "username" >Username</label>
+                <style>
+                    .login label[for="username"] {
+                        display: block;
+                        text-align: center;
+                        font-size: 0.8em;
+                        margin-bottom: -15px;
+                        margin-top: 0;
+                    }
+                </style>
+                {{ login_form.username }}
+                <label for = "password" >Password</label>
+                <style>
+                    .login label[for="password"] {
+                        display: block;
+                        text-align: center;
+                        font-size: 0.8em;
+                        margin-bottom: -15px;
+                        margin-top: 0;
+                    }
+                </style>
+                {{ login_form.password }}
+                <button type="submit" name="login">Login</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

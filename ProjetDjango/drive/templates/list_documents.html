@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- list_documents.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mes Documents</title>
+    <style>
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            padding: 8px;
+            z-index: 1;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Liste de vos documents</h1>
+
+    {% if documents %}
+        <ul>
+            {% for document in documents %}
+                <li>
+                    <a href="{{ document.file.url }}" target="_blank">{{ document.file.name }}</a>
+                    - {{ document.uploaded_at|date:"d/m/Y H:i" }}
+                    - Taille : {{ document.size }} octets
+                
+                
+
+                    <!-- Menu des trois petits points -->
+                    <div class="dropdown">
+                        <span>⋮</span>
+                        <div class="dropdown-content">
+                            <a href="{% url 'delete_document' document.id %}">Supprimer</a>
+                            <a href="{% url 'move_document' document.id %}">Déplacer</a>
+                            <a href="{% url 'rename_document' document.id %}">Renommer</a>
+                            <a href="{% url 'download_document' document.id %}">Télécharger</a>
+                        </div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucun document trouvé.</p>
+    {% endif %}
+
+    <a href="{% url 'upload' %}">Retour à l'upload</a>
+
+     <!-- Script JavaScript pour afficher le menu au clic -->
+     <script>
+        document.addEventListener('click', function(event) {
+            // Vérifie si l'élément cliqué est le menu de trois points
+            if (event.target.matches('.dropdown span')) {
+                // Affiche ou cache le menu d'options
+                const dropdownContent = event.target.nextElementSibling;
+                dropdownContent.style.display = dropdownContent.style.display === 'block' ? 'none' : 'block';
+            } else {
+                // Cache tous les menus si l'on clique en dehors
+                document.querySelectorAll('.dropdown-content').forEach(menu => menu.style.display = 'none');
+            }
+        });
+    </script>
+</body>
+</html>
+
+{% endblock %}

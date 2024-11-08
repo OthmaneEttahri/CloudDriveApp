@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="scroll-container"></div>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mes Documents</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background-color: #e1e3e6;
+      border-bottom: 1px solid #d1d5db;
+    }
+    .header input[type="text"] {
+      flex-grow: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid #d1d5db;
+      margin-left: 20px;
+    }
+    .container {
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+    h2 {
+      color: #333;
+      font-weight: 500;
+    }
+    .document-list {
+      margin-top: 20px;
+      background-color: #ffffff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .document-list h3 {
+      font-size: 1.2em;
+      color: #555;
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      transition: background-color 0.2s;
+    }
+    .file-item:hover {
+      background-color: #f1f3f5;
+    }
+    .file-details {
+      display: flex;
+      flex-grow: 1;
+      flex-direction: column;
+    }
+    .file-details strong {
+      color: #333;
+      font-size: 1em;
+    }
+    .file-details span {
+      color: #666;
+      font-size: 0.9em;
+    }
+    .file-actions {
+      margin-left: auto;
+      font-size: 1.2em;
+      color: #a1a1a1;
+      cursor: pointer;
+    }
+    /* Icône de dossier */
+    .folder-icon {
+      font-size: 1.5em;
+      color: #ffbe76;
+      margin-right: 10px;
+    }
+    /* Icône de fichier */
+    .file-icon {
+      font-size: 1.5em;
+      color: #3498db;
+      margin-right: 10px;
+    }
+    /* Menu déroulant */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: #f9f9f9;
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      padding: 8px;
+      z-index: 1;
+      border-radius: 5px;
+    }
+    .dropdown-content a {
+      color: #333;
+      text-decoration: none;
+      display: block;
+      padding: 5px 10px;
+    }
+    .dropdown-content a:hover {
+      background-color: #e1e3e6;
+    }
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <input type="text" placeholder="Rechercher dans Mes Documents">
+  </div>
+
+  <div class="container">
+    <h2>Bienvenue dans Mes Documents</h2>
+    <div class="document-list">
+      <h3>Liste de vos dossiers et documents</h3>
+      <ul>
+          <!-- Affichage des dossiers -->
+          {% if folders %}
+              {% for folder in folders %}
+                  <li class="file-item" ondblclick=window.location.href="{%url 'open_folder' folder.id %}">
+                      <span class="folder-icon">📁</span>
+                      <div class="file-details">
+                          <strong>{{ folder.name }}</strong>
+                      </div>
+                      <div class="file-actions">
+                        <div class="dropdown">
+                            <span>⋮</span>
+                            <div class="dropdown-content">
+                                <a href="{%url 'delete_folder' folder.id%}">Supprimer</a>
+                                
+                            </div>
+                        </div>
+                    </div>
+                  </li>
+              {% endfor %}
+          {% endif %}
+
+          <!-- Affichage des documents -->
+          {% if documents %}
+              {% for document in documents %}
+                  <li class="file-item">
+                      <span class="file-icon">📄</span>
+                      <div class="file-details">
+                          <strong>{{ document.file.name }}</strong>
+                          <span>{{ document.uploaded_at|date:"d/m/Y H:i" }}</span>
+                          <span>Taille : {{ document.size }} octets</span>
+                      </div>
+                      <!-- Menu d'options pour les documents -->
+                      <div class="file-actions">
+                          <div class="dropdown">
+                              <span>⋮</span>
+                              <div class="dropdown-content">
+                                  <a href="{% url 'delete_document' document.id %}">Supprimer</a>
+                                  <a href="{% url 'move_document' document.id %}">Déplacer</a>
+                                  <a href="{%url 'rename_document' document.id %}">Renommer</a>
+                                  <a href="{% url 'download_document' document.id %}">Télécharger</a>
+                              </div>
+                          </div>
+                      </div>
+                  </li>
+              {% endfor %}
+          {% else %}
+              <p>Aucun document trouvé.</p>
+          {% endif %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- Script JavaScript pour afficher le menu au clic -->
+  <script>
+    document.addEventListener('click', function(event) {
+      // Vérifie si l'élément cliqué est le menu de trois points
+      if (event.target.matches('.dropdown span')) {
+        // Affiche ou cache le menu d'options
+        const dropdownContent = event.target.nextElementSibling;
+        dropdownContent.style.display = dropdownContent.style.display === 'block' ? 'none' : 'block';
+      } else {
+        // Cache tous les menus si l'on clique en dehors
+        document.querySelectorAll('.dropdown-content').forEach(menu => menu.style.display = 'none');
+      }
+    });
+  </script>
+</body>
+</html>
+
+{% endblock %}

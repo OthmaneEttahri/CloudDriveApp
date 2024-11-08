@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- rename_document.html -->
+<h2>Renommer le document {{ document.file.name }}</h2>
+<form method="post">
+    {% csrf_token %}
+    <label for="new_name">Nouveau nom :</label>
+    <input type="text" id="new_name" name="new_name" required>
+    <button type="submit">Renommer</button>
+    <a href="{% url 'documents2' %}">Annuler</a>
+</form>
+{% endblock %}
