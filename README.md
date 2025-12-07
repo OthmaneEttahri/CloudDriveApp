@@ -19,7 +19,7 @@ File Format Distribution: Displays statistics on the types of files stored by fo
 ### To run this project locally, follow the steps below:
 
 #### prerequisities 
-Python 3.x installed on your machine.
+Python 3.x installed on your machine. et test hehe
 Django (latest version) installed via pip.
 #### steps to install and run
 Download the Project
