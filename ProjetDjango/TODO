@@ -1,0 +1,10 @@
+rendre le front un peu plus joli (page d'acceuil)
+renommer les noms de paths
+redirection automatique : après actions ou à la connexion (le port serveur rend directement vers le site)
+bouton sur "Application Drive" doit rediriger vers l'acceuil (page acceuil = page documents racine ?)
+mettre directement sur un dossier 
+
+
+Aspect Cloud : 
+Contenairiser l'app fonctionnelle (à tester sur un autre environnement avant dépot)
+utiliser un storage account pour le dossier media 

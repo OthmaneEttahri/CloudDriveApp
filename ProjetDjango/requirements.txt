@@ -1,0 +1,6 @@
+Django 5.1.2
+django-storages[azure]  # Pour connecter Django à Azure Blob Storage
+azure-identity          # Pour l'authentification
+whitenoise              # Pour servir les fichiers static (CSS) en prod
+gunicorn                # Serveur HTTP pour la prod (mieux que manage.py runserver)
+matplotlib              # Pour les graphiques

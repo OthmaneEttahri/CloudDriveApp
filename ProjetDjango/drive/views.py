@@ -15,6 +15,7 @@ from collections import defaultdict
 from django.http import HttpResponse
 from io import BytesIO
 import matplotlib.pyplot as plt
+from django.core.files.base import ContentFile
 
 
 # Create your views here.
@@ -99,90 +100,104 @@ def confirm_delete(request, document_id):
 
 @login_required
 def delete_document(request, document_id):
+    # Récupération de l'objet
     document = get_object_or_404(Document, id=document_id, user=request.user)
-    if request.method == "POST":
-        # Supprime d'abord le document de la base de données
-        document.delete()
 
-        # Ensuite, supprime le fichier s'il est toujours présent
+    if request.method == "POST":
+        # 1. Supprimer le fichier physique sur Azure Blob
+        # Django va appeler l'API Azure pour supprimer le blob correspondant
         if document.file:
-            try:
-                document.file.delete(save=False)  # Supprime le fichier sans sauvegarder l'instance
-            except Exception as e:
-                print("Erreur lors de la suppression du fichier :", e)
+            document.file.delete(save=False) 
+        
+        # 2. Supprimer l'entrée en base de données
+        document.delete()
         
         messages.success(request, "Document supprimé avec succès.")
         return redirect('documents2')
 
     return render(request, 'confirm_delete.html', {'document': document})
 
+
+'''
+Pour la fonction move, au lieu de copier et supprimer le fichier
+et de créer un nouveau Document, il vaut mieux changer 
+le dossier parent dans la base de données
+'''
+
 @login_required
 def move_document(request, document_id):
     document = get_object_or_404(Document, id=document_id, user=request.user)
-    
+
     if request.method == "POST":
-        # Récupérer l'ID du dossier de destination
-        new_folder_id = request.POST.get("new_path")
+        new_folder_id = request.POST.get("new_path") # Assure-toi que ton HTML envoie bien cet ID
         
-        # Retrouver le dossier cible
-        new_folder = get_object_or_404(Folder, id=new_folder_id, user=request.user)
-        
-        # Définir le chemin source et le chemin cible pour le fichier
-        old_path = document.file.path
-        new_path = os.path.join(settings.MEDIA_ROOT, f'user_{request.user.id}', new_folder.get_folder_path(), os.path.basename(old_path))
-        
-        # Déplacer le fichier
-        try:
-            os.makedirs(os.path.dirname(new_path), exist_ok=True)
-            os.rename(old_path, new_path)
-        except Exception as e:
-            messages.error(request, "Erreur lors du déplacement du fichier.")
-            return redirect('documents2')
-        
-        # Mettre à jour le champ `file` et `folder` du document
-        document.file.name = os.path.join(f'user_{request.user.id}', new_folder.get_folder_path(), os.path.basename(document.file.name))
-        document.folder = new_folder
-        document.save()  # Enregistrer les modifications dans la base de données
-        
-        messages.success(request, "Document déplacé avec succès.")
+        if new_folder_id:
+            # On récupère le dossier cible (vérification qu'il appartient bien au user)
+            new_folder = get_object_or_404(Folder, id=new_folder_id, user=request.user)
+            
+            # --- MODIFICATION CLOUD ---
+            # On ne touche PAS au fichier physique (pas de os.rename).
+            # On change simplement l'étiquette "dossier" dans la base de données.
+            document.folder = new_folder
+            document.save()
+            
+            messages.success(request, "Document déplacé avec succès.")
+        else:
+            # Si aucun dossier sélectionné (déplacement vers la racine)
+            document.folder = None
+            document.save()
+            messages.success(request, "Document déplacé vers la racine.")
+
         return redirect('documents2')
-    
+
     else:
+        # Affichage du formulaire
         folders = Folder.objects.filter(user=request.user)
         return render(request, 'move_document.html', {'document': document, 'folders': folders})
-
 
 
 @login_required
 def rename_document(request, document_id):
     document = get_object_or_404(Document, id=document_id, user=request.user)
+    
     if request.method == 'POST':
         new_name = request.POST.get('new_name')
-
-        # Récupérer l'extension d'origine
-        original_extension = os.path.splitext(document.file.name)[1]  # ex : ".jpg"
-
-        # Si l'utilisateur n'a pas fourni l'extension, on ajoute celle d'origine
+        
+        # Gestion de l'extension
+        original_extension = os.path.splitext(document.file.name)[1]
         if not os.path.splitext(new_name)[1]:
             new_name += original_extension
 
-        old_path = document.file.path
-        new_path = os.path.join(os.path.dirname(old_path), new_name)
+        # Si le nom n'a pas changé, on ne fait rien
+        if new_name == os.path.basename(document.file.name):
+             return redirect('documents2')
 
         try:
-            # Renommer le fichier dans le système de fichiers avec default_storage
-            default_storage.rename(document.file.name, new_path)
-
-            # Mettre à jour le chemin du fichier dans la base de données
-            document.file.name = f'user/{request.user.id}/{new_name}'
-            document.save(update_fields=['file'])
+            # --- LOGIQUE CLOUD POUR RENOMMER ---
+            # 1. Lire le contenu de l'ancien fichier (Téléchargement depuis Azure en mémoire)
+            file_content = document.file.read()
+            
+            # 2. Sauvegarder ce contenu sous le NOUVEAU nom
+            # Django gère automatiquement le chemin (user_ID/new_name) via ton modèle
+            old_filename = document.file.name # On garde l'ancien chemin en mémoire
+            
+            # On assigne le nouveau fichier (cela va déclencher l'upload vers Azure)
+            document.file.save(new_name, ContentFile(file_content))
+            
+            # 3. Supprimer l'ANCIEN fichier sur Azure (via django-storages)
+            # Pour éviter de garder des fichiers orphelins
+            document.file.storage.delete(old_filename)
+            
+            # 4. Sauvegarde finale en BDD
+            document.save()
 
             messages.success(request, "Document renommé avec succès.")
+            
         except Exception as e:
             messages.error(request, f"Erreur lors du renommage : {e}")
-        
+            
         return redirect('documents2')
-    
+        
     return render(request, 'rename_document.html', {'document': document})
 
 
@@ -212,14 +227,6 @@ def create_folder(request):
             folder.user = request.user  # Associe le dossier à l'utilisateur actuel
             folder.parent = None  # Dossier racine, donc pas de parent
             folder.save()
-            
-
-            # Créer un répertoire physique pour ce dossier dans 'media'
-            folder_path = os.path.join(settings.MEDIA_ROOT,  "user_"+str(folder.user.id), folder.name)
-            os.makedirs(folder_path, exist_ok=True)  # Crée le dossier si nécessaire
-            print(folder.id)
-            
-
             return redirect('documents2')  # Redirige vers la liste des documents
         
     return redirect('documents2')  # Redirige vers la liste même si la requête n'est pas POST
@@ -268,25 +275,21 @@ def delete_folder(request, folder_id: int):
 
 @login_required
 def stats(request):
-    user_folder = os.path.join(settings.MEDIA_ROOT, f'user_{request.user.id}')
+    documents = Document.objects.filter(user=request.user)
     document_types = defaultdict(int)
 
     # Analyse des types de documents
-    for root, dirs, files in os.walk(user_folder):
-        for file in files:
-            file_path = os.path.join(root, file)
-            mime_type, _ = mimetypes.guess_type(file_path)
-            if mime_type:
-                if mime_type.startswith('image'):
-                    document_types['Image'] += 1
-                elif mime_type == 'application/pdf':
-                    document_types['PDF'] += 1
-                elif mime_type.startswith('video'):
-                    document_types['Video'] += 1
-                elif mime_type.startswith('audio'):
-                    document_types['MP3'] += 1
-                else:
-                    document_types['Other'] += 1
+    for doc in documents:
+        mime_type, _ = mimetypes.guess_type(doc.file.name)
+        if mime_type:
+            if mime_type.startswith('image'):
+                document_types['Image'] += 1
+            elif mime_type == 'application/pdf':
+                document_types['PDF'] += 1
+            elif mime_type.startswith('video'):
+                document_types['Video'] += 1
+            elif mime_type.startswith('audio'):
+                document_types['MP3'] += 1
             else:
                 document_types['Other'] += 1
 
