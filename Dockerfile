@@ -1,26 +1,33 @@
 FROM python:3.10-slim
 
-# On se place dans /app dans le conteneur
 WORKDIR /app
 
-# Installation des dépendances système
-RUN apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# 1. Installation des dépendances système ET de SSH
+# On installe openssh-server, on définit le mot de passe root à "Docker!" (standard Azure)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc libpq-dev openssh-server \
+    && echo "root:Docker!" | chpasswd \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# 1. Copie des requirements (qui sont dans le sous-dossier)
-# On les copie à la racine de /app pour les installer
+# 2. Copie et installation des requirements
 COPY ProjetDjango/requirements.txt . 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 2. Copie du code source
-# On prend le contenu du sous-dossier et on le met dans /app
+# 3. Copie du code source
 COPY ProjetDjango/ .
 
-# 3. Collectstatic
+# 4. Configuration SSH
+COPY sshd_config /etc/ssh/
+COPY entrypoint.sh .
+# Rendre le script exécutable (très important)
+RUN chmod +x entrypoint.sh
+
+# 5. Collectstatic
 RUN python manage.py collectstatic --noinput
 
-EXPOSE 8000
+# 6. Exposition des ports (8000 pour le Web, 2222 pour le SSH Azure)
+EXPOSE 8000 2222
 
-# Comme on a "aplati" la structure en copiant le contenu du sous-dossier vers /app,
-# manage.py est maintenant directement dans /app.
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "ProjetDjango.wsgi:application"]
+# 7. Lancement via le script
+ENTRYPOINT ["./entrypoint.sh"]
